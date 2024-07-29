@@ -1,0 +1,10 @@
+.vscode/
+.idea/
+
+*.egg-info/
+*.egg
+
+logs/
+videos/
+
+__pycache__/
