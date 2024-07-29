@@ -7,14 +7,14 @@ It includes all components needed for sim-to-real transfer: actuator network, fr
 
 ---
 **Maintainer**: engienai  
-**Affiliation**: Engineai Robot, China  
-**Contact**: rl@engineai.com.cn  
+**Affiliation**: Engineai Robot, China(https://engineai.com/)
+**Contact**: info@engineai.com.cn  
 
 ---
 
 ### Useful Links ###
 
-Project website: TODO
+Project website: https://github.com/engineai-robotics/engineai_legged_gym
 
 ### Installation ###
 1. Create a new python virtual env with python 3.6, 3.7 or 3.8 (3.8 recommended)
@@ -29,7 +29,7 @@ Project website: TODO
    -  `cd rsl_rl && pip install -e .` 
 5. Install legged_gym
     - Clone this repository
-   - `cd engineai_training && pip install -e .`
+   - `cd engineai_legged_gym && pip install -e .`
 
 ### CODE STRUCTURE ###
 1. Each environment is defined by an env file (`legged_robot.py`) and a config file (`legged_robot_config.py`). The config file contains two classes: one containing  all the environment parameters (`LeggedRobotCfg`) and one for the training parameters (`LeggedRobotCfgPPo`).  
