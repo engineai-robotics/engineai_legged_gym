@@ -34,6 +34,7 @@ import torch.optim as optim
 
 from rsl_rl.modules import ActorCritic
 from rsl_rl.storage import RolloutStorage
+import numpy as np
 
 class PPO:
     actor_critic: ActorCritic
@@ -52,6 +53,11 @@ class PPO:
                  schedule="fixed",
                  desired_kl=0.01,
                  device='cpu',
+                 sym_loss = False,
+                 obs_permutation = None,
+                 act_permutation = None,
+                 frame_stack = 15,
+                 sym_coef = 1.0,
                  ):
 
         self.device = device
@@ -77,6 +83,20 @@ class PPO:
         self.lam = lam
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
+
+        self.sym_loss = sym_loss
+        self.sym_coef = sym_coef
+        if self.sym_loss:
+            self.act_perm_mat = torch.zeros((len(act_permutation), len(act_permutation))).cuda()
+            for i, perm in enumerate(act_permutation):
+                self.act_perm_mat[int(abs(perm))][i] = np.sign(perm) 
+            obs_permutation_stack = []
+            for i in range(frame_stack):
+                for p in obs_permutation:
+                    obs_permutation_stack.append(np.sign(p)*(abs(p)+i*len(obs_permutation)))  
+            self.obs_perm_mat = torch.zeros((len(obs_permutation_stack), len(obs_permutation_stack))).cuda()
+            for i, perm in enumerate(obs_permutation_stack):
+                self.obs_perm_mat[int(abs(perm))][i] = np.sign(perm)  
 
     def init_storage(self, num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, action_shape):
         self.storage = RolloutStorage(num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, action_shape, self.device)
@@ -120,6 +140,8 @@ class PPO:
     def update(self):
         mean_value_loss = 0
         mean_surrogate_loss = 0
+        mean_sym_loss = 0
+        
         if self.actor_critic.is_recurrent:
             generator = self.storage.reccurent_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
         else:
@@ -134,6 +156,15 @@ class PPO:
                 mu_batch = self.actor_critic.action_mean
                 sigma_batch = self.actor_critic.action_std
                 entropy_batch = self.actor_critic.entropy
+
+                #sym loss
+                sym_loss = 0 
+                if self.sym_loss:
+                    mirror_obs = torch.matmul(obs_batch,self.obs_perm_mat)
+                    mirror_act = self.actor_critic.actor(mirror_obs)
+                    m_mirror_act = torch.matmul(mirror_act,self.act_perm_mat)
+                    sym_loss = (mu_batch-m_mirror_act).pow(2).mean()
+                    # print("shapes:",obs_batch.shape,mirror_obs.shape,mirror_act.shape,m_mirror_act.shape,mu_batch.shape)
 
                 # KL
                 if self.desired_kl != None and self.schedule == 'adaptive':
@@ -168,7 +199,8 @@ class PPO:
                 else:
                     value_loss = (returns_batch - value_batch).pow(2).mean()
 
-                loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
+                loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + self.sym_coef * sym_loss
+
 
                 # Gradient step
                 self.optimizer.zero_grad()
@@ -178,10 +210,12 @@ class PPO:
 
                 mean_value_loss += value_loss.item()
                 mean_surrogate_loss += surrogate_loss.item()
+                mean_sym_loss += sym_loss.item()
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
+        mean_sym_loss /= num_updates
         self.storage.clear()
 
-        return mean_value_loss, mean_surrogate_loss
+        return mean_value_loss, mean_surrogate_loss, mean_sym_loss

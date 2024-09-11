@@ -7,11 +7,18 @@ setup(
     author='engineai',
     license="BSD-3-Clause",
     packages=find_packages(),
-    author_email='rl@engineai.com.cn',
+    author_email='info@engineai.com.cn',
     description='Isaac Gym environments for Legged Robots',
     install_requires=['isaacgym',
                       'rsl-rl',
                       'tensorboard',
                       'setuptools==59.5.0',
-                      'matplotlib']
+                      'matplotlib',
+                      'numpy==1.23',
+                      'opencv-python',
+                      'tqdm',
+                      'opencv-python',
+                      'pygame',
+                      'mujoco',
+                      'mujoco-python-viewer']
 )

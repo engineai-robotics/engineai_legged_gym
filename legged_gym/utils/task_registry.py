@@ -99,6 +99,7 @@ class TaskRegistry():
                             physics_engine=args.physics_engine,
                             sim_device=args.sim_device,
                             headless=args.headless)
+        self.env_cfg_for_wandb = env_cfg
         return env, env_cfg
 
     def make_alg_runner(self, env, name=None, args=None, train_cfg=None, log_root="default") -> Tuple[OnPolicyRunner, LeggedRobotCfgPPO]:
@@ -135,24 +136,32 @@ class TaskRegistry():
         # override cfg from args (if specified)
         _, train_cfg = update_cfg_from_args(None, train_cfg, args)
 
+        current_date_time_str = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
         if log_root=="default":
-            log_root = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name)
-            log_dir = os.path.join(log_root, datetime.now().strftime('%b%d_%H-%M-%S') + '_' + train_cfg.runner.run_name)
+            log_root = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported_data')
+            log_dir = os.path.join(log_root, current_date_time_str + train_cfg.runner.run_name)
         elif log_root is None:
             log_dir = None
         else:
-            log_dir = os.path.join(log_root, datetime.now().strftime('%b%d_%H-%M-%S') + '_' + train_cfg.runner.run_name)
+            log_dir = os.path.join(log_root, current_date_time_str + train_cfg.runner.run_name)
         
         train_cfg_dict = class_to_dict(train_cfg)
-        runner = OnPolicyRunner(env, train_cfg_dict, log_dir, device=args.rl_device)
+        env_cfg_dict = class_to_dict(self.env_cfg_for_wandb)
+        all_cfg = {**train_cfg_dict, **env_cfg_dict}
+        
+        runner_class = eval(train_cfg_dict["runner_class_name"])
+        runner = runner_class(env, all_cfg, log_dir, device=args.rl_device)
         #save resume path before creating a new log_dir
         resume = train_cfg.runner.resume
         if resume:
             # load previously trained model
             resume_path = get_load_path(log_root, load_run=train_cfg.runner.load_run, checkpoint=train_cfg.runner.checkpoint)
             print(f"Loading model from: {resume_path}")
-            runner.load(resume_path)
-        return runner, train_cfg
+            runner.load(resume_path, load_optimizer=False)
+
+        print("log_dir: ", log_dir)
+        return runner, train_cfg, log_dir
 
 # make global task registry
 task_registry = TaskRegistry()

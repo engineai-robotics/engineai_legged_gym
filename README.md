@@ -2,12 +2,12 @@
 This repository provides the environment used to train engineai-robots (and other robots) to walk on rough terrain using NVIDIA's Isaac Gym.
 It includes all components needed for sim-to-real transfer: actuator network, friction & mass randomization, noisy observations and random pushes during training.  
 
-## 2024.07.29 This repo is currently in beta. The full version will be launched within a week. ##
+## 2024.09.10 This is the full version of our repository which offers the basic operation of RL, including training, play(generate .pt model), sim2sim, and sim2rea(generate .onnx model for real deployment). This repository will be maintained and update continuously##
 
 
 ---
 **Maintainer**: engienai  
-**Affiliation**: Engineai Robot, China(https://engineai.com/)
+**Affiliation**: Engineai Robot, China(https://www.engineai.com.cn/)
 **Contact**: info@engineai.com.cn  
 
 ---
@@ -17,19 +17,19 @@ It includes all components needed for sim-to-real transfer: actuator network, fr
 Project website: https://github.com/engineai-robotics/engineai_legged_gym
 
 ### Installation ###
-1. Create a new python virtual env with python 3.6, 3.7 or 3.8 (3.8 recommended)
+1. Create a new python virtual env with python 3.8 (3.8 recommended)
 2. Install pytorch 1.10 with cuda-11.3:
     - `pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117`
 3. Install Isaac Gym
    - Download and install Isaac Gym Preview 4 from https://developer.nvidia.com/isaac-gym
    - `cd isaacgym/python && pip install -e .`
    - Try running an example `cd examples && python 1080_balls_of_solitude.py`
-   - For troubleshooting check docs `isaacgym/docs/index.html`)
-4. Install rsl_rl (PPO implementation)
+   - For troubleshooting check docs `isaacgym/docs/index.html`
+4. Install rsl_rl(PPO implementation)
+   - Clone this repository
    -  `cd rsl_rl && pip install -e .` 
-5. Install legged_gym
-    - Clone this repository
-   - `cd engineai_legged_gym && pip install -e .`
+5. Install engineai_legged_gym
+    - `cd engineai_legged_gym && pip install -e .`
 
 ### CODE STRUCTURE ###
 1. Each environment is defined by an env file (`legged_robot.py`) and a config file (`legged_robot_config.py`). The config file contains two classes: one containing  all the environment parameters (`LeggedRobotCfg`) and one for the training parameters (`LeggedRobotCfgPPo`).  
@@ -40,10 +40,10 @@ Project website: https://github.com/engineai-robotics/engineai_legged_gym
 ### Usage ###
 1. Train:  
   ```python legged_gym/scripts/train.py --task=zqsa01```
-    -  To run on CPU add following arguments: `--sim_device=cpu`, `--rl_device=cpu` (sim on CPU and rl on GPU is possible).
+    -  To run on CPU, add following arguments: `--sim_device=cpu`, `--rl_device=cpu` (sim on CPU and rl on GPU is possible).
     -  To run headless (no rendering) add `--headless`.
     - **Important**: To improve performance, once the training starts press `v` to stop the rendering. You can then enable it later to check the progress.
-    - The trained policy is saved in `issacgym_anymal/logs/<experiment_name>/<date_time>_<run_name>/model_<iteration>.pt`. Where `<experiment_name>` and `<run_name>` are defined in the train config.
+    - The trained policy is saved in `engineai_legged_gym/logs/<experiment_name>/<date_time>_<run_name>/model_<iteration>.pt`. Where `<experiment_name>` and `<run_name>` are defined in the train config.
     -  The following command line arguments override the values set in the config files:
      - --task TASK: Task name.
      - --resume:   Resume training from a checkpoint
@@ -58,6 +58,14 @@ Project website: https://github.com/engineai-robotics/engineai_legged_gym
 ```python legged_gym/scripts/play.py --task=zqsa01```
     - By default, the loaded policy is the last model of the last run of the experiment folder.
     - Other runs/model iteration can be selected by setting `load_run` and `checkpoint` in the train config.
+3. sim2sim: 
+    
+    ``` python legged_gym/scripts/sim2sim_zqsa01.py --load_model logs/zqsa01_ppo/0_exported/policies/policy_1.pt ```
+
+4. sim2real:
+
+    ``` python sim2real_deploy/export_onnx_policy.py```
+        - a file named zqsa01_policy.onnx is generated, and this file can be used to replace the one in the real robot deployment. Check the deployment process with the README.md in our repository[eigineai_humanoid](https://github.com/engineai-robotics/engineai_humanoid)
 
 ### Adding a new environment ###
 The base environment `legged_robot` implements a rough terrain locomotion task. The corresponding cfg does not specify a robot asset (URDF/ MJCF) and has no reward scales. 
@@ -71,6 +79,7 @@ The base environment `legged_robot` implements a rough terrain locomotion task. 
 4. Register your env in `legged_gym/envs/__init__.py`.
 5. Modify/Tune other parameters in your `cfg`, `cfg_train` as needed. To remove a reward set its scale to zero. Do not modify parameters of other envs!
 
+If you are a beginner of RL, please refer to the detail process of adding a new environment with this repo [legged_gym](https://github.com/leggedrobotics/legged_gym/tree/master) 
 
 ### Troubleshooting ###
 1. If you get the following error: `ImportError: libpython3.8m.so.1.0: cannot open shared object file: No such file or directory`, do: `sudo apt install libpython3.8`. It is also possible that you need to do `export LD_LIBRARY_PATH=/path/to/libpython/directory` / `export LD_LIBRARY_PATH=/path/to/conda/envs/your_env/lib`(for conda user. Replace /path/to/ to the corresponding path.).

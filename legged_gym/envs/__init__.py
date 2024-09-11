@@ -30,8 +30,8 @@
 
 from legged_gym import LEGGED_GYM_ROOT_DIR, LEGGED_GYM_ENVS_DIR
 from .base.legged_robot import LeggedRobot
-from .zq_sa01.zq_sa01 import ZqSA01
-from .zq_sa01.zq_sa01_config import ZqSA01Cfg, ZqSA01CfgPPO
+from .zqsa01.zqsa01 import ZqSA01
+from .zqsa01.zqsa01_config import ZqSA01Cfg, ZqSA01CfgPPO
 
 import os
 
